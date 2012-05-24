@@ -1,23 +1,31 @@
 #!/usr/bin/env python
 
-from git import *
-from gi.repository import Notify
-repo = Repo("~/Devel/IRR")
-origin = repo.remotes.origin
+from optparse import OptionParser
+import json
+from gi.repository import Gio
 
-current_master_HEAD_commit_sha = repo.head.commit.hexsha
-origin_master_HEAD_commit_sha = origin.refs[0].commit.hexsha
+def load_configuration():
+    # Load configuration from dconf
+    settings = Gio.Settings.new("com.github.roignac.gitpynotify")
+    return json.loads(settings.get_string("configuration"))
 
-if current_master_HEAD_commit_sha != origin_master_HEAD_commit_sha:
-    # Get details on commit
-    origin_commit = origin.refs[0].commit
-    title = "New commit in %s by %s" % (origin.url,
-                                    origin_commit.committer.name)
-    message = "%s\n\n%s" % (origin_commit.summary,
-                        origin_commit.message)
+def run_as_daemon(configuration):
+    # Parse configuration
+    repo_object_collection = []
+    for repo in configuration['repos']:
+        dummy = RepoNotification(repo['path'], repo['timeout'])
+        repo_object_collection.append(dummy)
 
-    Notify.init (title)
-    Hello=Notify.Notification.new (title,
-                               message,
-                               "dialog-information")
-    Hello.show ()
+if __name__=="__main__":
+    parser = OptionParser()
+    parser.add_option("-c", "--configure", help="configure settings")
+
+    (options, args) = parser.parse_args()
+    
+    configuration = load_configuration()
+    
+    if options['configure'] or configuration == None:
+        # Show GUI here
+        print "Here be GUI"
+    else:
+        run_as_daemon(configuration)
